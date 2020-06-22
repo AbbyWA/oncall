@@ -1,0 +1,15 @@
+{
+  "leaders": [
+    {
+      "name": "董事长"
+    },
+    {
+      "name": "CEO"
+    }
+  ],
+  "secretaries": [
+    {
+      "name": "秘书"
+    }
+  ]
+}

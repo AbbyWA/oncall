@@ -1,11 +1,22 @@
-// import WebSocket from 'ws';
+import Server from 'socket.io';
+import Store from 'electron-store';
+import data from './data.json';
 
-const wss = new WebSocket.Server({ port: 8080 });
+const io = new Server(8900, { serveClient: false });
+io.origins('*:*');
 
-wss.on('connection', function connection(ws) {
-  ws.on('message', function incoming(message) {
-    console.log('received: %s', message);
+io.on('connect', (socket) => {
+  console.log('connect!!!');
+
+  socket.on('pull-leader-list', () => {
+    console.log('pull-leader-list');
+    socket.emit('push-leader-list', data.leaders);
+    io.emit('push-leader-list', data.leaders);
   });
-
-  ws.send('something');
 });
+
+const store = new Store();
+console.log('unicorn', store.get('unicorn'));
+
+store.set('unicorn', '🦄');
+store.delete('unicorn');

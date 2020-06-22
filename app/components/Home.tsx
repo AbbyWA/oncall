@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
@@ -8,15 +8,16 @@ import ListItemText from '@material-ui/core/ListItemText';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ExposurePlus1Icon from '@material-ui/icons/ExposurePlus1';
 import { makeStyles } from '@material-ui/core/styles';
-import routes from '../constants/routes.json';
+import client from '../client';
 import styles from './Home.css';
+import routes from '../constants/routes.json';
 
 const useStyles = makeStyles((theme) => ({
   root: {
     flexGrow: 1,
   },
   paper: {
-    padding: theme.spacing(2),
+    // padding: theme.spacing(2),
     textAlign: 'center',
     color: theme.palette.text.secondary,
   },
@@ -24,40 +25,36 @@ const useStyles = makeStyles((theme) => ({
 
 export default function Home(): JSX.Element {
   const classes = useStyles();
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [leaderList] = useState([
-    {
-      id: 0,
-      name: '董事长1',
-    },
-    {
-      id: 1,
-      name: '总经理',
-    },
-  ]);
+  const [selected, setSelected] = useState();
+  const [leaderList, setLeaderList] = useState([]);
+  const [visitorList, setVisitorList] = useState([]);
 
-  const [visitorList] = useState([
-    {
-      id: 100,
-      name: '董事长qq',
-      summary: '签字',
-    },
-  ]);
+  const changeSelected = (name) => {
+    setSelected(name);
+  };
+
+  useEffect(() => {
+    client.emit('pull-leader-list');
+    client.on('push-leader-list', (data) => {
+      setLeaderList(data);
+      changeSelected(data[0].name);
+    });
+  }, []);
 
   return (
     <div className={styles.container} data-tid="container">
-      <Link to={routes.COUNTER}>to Counter</Link>
+      {/* <Link to={routes.COUNTER}>to Counter</Link> */}
       <Grid container spacing={3}>
         <Grid item xs={3}>
           <Paper className={classes.paper}>
             <List component="nav" aria-label="secondary mailbox folder">
-              {leaderList.map(({ id, name }) => (
+              {leaderList.map(({ name }) => (
                 <ListItem
-                  key={id}
+                  key={name}
                   button
-                  selected={selectedIndex === id}
+                  selected={selected === name}
                   onClick={() => {
-                    setSelectedIndex(id);
+                    setSelected(name);
                   }}
                 >
                   <ListItemText primary={name} />
@@ -75,15 +72,8 @@ export default function Home(): JSX.Element {
                 </ListItemIcon>
                 <ListItemText primary="添加" />
               </ListItem>
-              {visitorList.map(({ id, name }) => (
-                <ListItem
-                  key={id}
-                  button
-                  selected={selectedIndex === id}
-                  onClick={() => {
-                    setSelectedIndex(id);
-                  }}
-                >
+              {visitorList.map(({ name }) => (
+                <ListItem key={name}>
                   <ListItemText primary={name} />
                 </ListItem>
               ))}
