@@ -7,9 +7,11 @@ import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
+import Chip from '@material-ui/core/Chip';
 import { makeStyles } from '@material-ui/core/styles';
 import client from '../client';
 import styles from './Home.css';
+import { VisitorStatus } from '../constants';
 // import routes from '../constants/routes.json';
 
 const useStyles = makeStyles((theme) => ({
@@ -20,6 +22,7 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     textAlign: 'center',
     color: theme.palette.text.secondary,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
   },
 }));
 
@@ -50,7 +53,6 @@ export default function Home(): JSX.Element {
 
   return (
     <div className={styles.container} data-tid="container">
-      {/* <Link to={routes.COUNTER}>to Counter</Link> */}
       <Grid container spacing={3}>
         <Grid item xs={3}>
           <Paper className={classes.paper}>
@@ -84,6 +86,7 @@ export default function Home(): JSX.Element {
                   setNewVisitor({ ...newVisitor, name: event.target.value });
                 }}
                 variant="outlined"
+                style={{ marginRight: '20px' }}
               />
               <TextField
                 id="outlined-summary"
@@ -96,7 +99,7 @@ export default function Home(): JSX.Element {
                   });
                 }}
                 variant="outlined"
-                style={{ margin: '0 20px' }}
+                style={{ marginRight: '20px' }}
               />
               <Button
                 variant="contained"
@@ -108,6 +111,7 @@ export default function Home(): JSX.Element {
                     payload: {
                       ...newVisitor,
                       time: Date.now(),
+                      status: VisitorStatus.PENDING,
                     },
                   });
                   setNewVisitor({ name: '', summary: '' });
@@ -118,9 +122,27 @@ export default function Home(): JSX.Element {
             </div>
             <List component="nav" aria-label="secondary mailbox folder">
               {(visitors[selected] || []).map(
-                ({ name, summary, time }, index) => (
+                ({ name, summary, time, status }, index) => (
                   <ListItem key={`${name} ${summary} ${time}`}>
-                    <ListItemText primary={`${name} ${summary} ${time}`} />
+                    <Chip
+                      label={status}
+                      variant="outlined"
+                      color={
+                        // eslint-disable-next-line no-nested-ternary
+                        status === 'resolve'
+                          ? 'primary'
+                          : status === 'reject'
+                          ? 'secondary'
+                          : ''
+                      }
+                      style={{ marginRight: '10px' }}
+                    />
+                    <ListItemText
+                      primary={`[${new Date(
+                        time
+                      ).toLocaleString()}] ${name} ${summary}`}
+                    />
+
                     <Button
                       variant="contained"
                       color="secondary"
@@ -131,7 +153,7 @@ export default function Home(): JSX.Element {
                         });
                       }}
                     >
-                      取消
+                      清除
                     </Button>
                   </ListItem>
                 )

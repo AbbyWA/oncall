@@ -4,24 +4,24 @@ import { Switch, Route } from 'react-router-dom';
 import routes from './constants/routes.json';
 import App from './containers/App';
 import HomePage from './containers/HomePage';
-
-// Lazily load routes and code split with webpacck
-const LazyCounterPage = React.lazy(() =>
-  import(/* webpackChunkName: "CounterPage" */ './containers/CounterPage')
-);
-
-const CounterPage = (props: Record<string, any>) => (
-  <React.Suspense fallback={<h1>Loading...</h1>}>
-    <LazyCounterPage {...props} />
-  </React.Suspense>
-);
+import LeaderPage from './containers/LeaderPage';
+import config from './config';
 
 export default function Routes() {
+  if (config.target === 'secretary') {
+    return (
+      <App>
+        <Switch>
+          <Route path={routes.HOME} component={HomePage} />
+        </Switch>
+      </App>
+    );
+  }
+
   return (
     <App>
       <Switch>
-        <Route path={routes.COUNTER} component={CounterPage} />
-        <Route path={routes.HOME} component={HomePage} />
+        <Route path={routes.LEADER} component={LeaderPage} />
       </Switch>
     </App>
   );
