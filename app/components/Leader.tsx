@@ -16,6 +16,8 @@ import { makeStyles } from '@material-ui/core/styles';
 import client from '../client';
 import styles from './Home.css';
 import { VisitorStatus } from '../constants';
+import { Router, Route } from 'react-router';
+import LeaderPage from '../containers/LeaderPage';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -26,6 +28,7 @@ const useStyles = makeStyles((theme) => ({
     textAlign: 'center',
     color: theme.palette.text.secondary,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    width: '100%',
   },
   formControl: {
     margin: theme.spacing(1),
@@ -93,7 +96,13 @@ export default function Leader(): JSX.Element {
           className={classes.paper}
           style={{ paddingTop: '20px', textAlign: 'left' }}
         >
-          <Button variant="contained" color="primary" onClick={() => {}}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              setName(null);
+            }}
+          >
             呼叫秘书
           </Button>
           <List component="nav" aria-label="secondary mailbox folder">
