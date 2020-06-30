@@ -1,6 +1,7 @@
 import Client from 'socket.io-client';
+import config from './config';
 
-const client = new Client('http://localhost:8900');
+const client = new Client(`http://${config.server}:${config.port}`);
 
 client.on('connect', () => {
   // eslint-disable-next-line no-console

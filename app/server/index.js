@@ -1,43 +1,111 @@
+/* eslint-disable no-underscore-dangle */
 import Server from 'socket.io';
 import Store from 'electron-store';
 import data from './data.json';
+import config from '../config';
 
 const store = new Store();
-const io = new Server(8900, { serveClient: false });
+const io = new Server(config.port, { serveClient: false });
 io.origins('*:*');
-let visitors = store.get('visitors');
 
-function visitorsChange() {
-  store.set('visitors', visitors);
-  io.emit('push-visitor-list', visitors);
+class Domain {
+  constructor(key, broadcastMessage, init) {
+    this._data = store.get(key);
+    this.key = key;
+    this.broadcastMessage = broadcastMessage;
+
+    if (!this._data) {
+      this._data = init();
+    }
+  }
+
+  handleChange() {
+    store.set(this.key, this._data);
+    io.emit(this.broadcastMessage, this._data);
+  }
+
+  get data() {
+    return this._data;
+  }
+
+  set data(value) {
+    this._data = value;
+
+    console.log(this.key, this._data);
+    this.handleChange();
+  }
 }
-if (!visitors) {
-  visitors = data.leaders.reduce((memo, { name }) => {
+
+const visitors = new Domain('visitors', 'push-visitor-list', () => {
+  return data.leaders.reduce((memo, { name }) => {
     memo[name] = [];
     return memo;
   }, {});
-  visitorsChange();
-}
+});
+const messages = new Domain('messages', 'push-messages', () => []);
 
 io.on('connect', (socket) => {
   socket.on('pull-leader-list', () => {
     socket.emit('push-leader-list', data.leaders);
   });
 
+  // visiters
   socket.on('pull-visitor-list', () => {
-    socket.emit('push-visitor-list', visitors);
+    socket.emit('push-visitor-list', visitors.data);
   });
 
   socket.on('add-visitor-by-name', ({ name, payload }) => {
-    visitors[name].unshift(payload);
-    visitorsChange();
+    visitors.data = {
+      ...visitors.data,
+      [name]: [payload, ...visitors.data[name]],
+    };
   });
 
+  function deleteVisitorByName(name, index) {
+    console.log(name, index);
+    visitors.data = {
+      ...visitors.data,
+      [name]: [
+        ...visitors.data[name].slice(0, index),
+        ...visitors.data[name].slice(index + 1),
+      ],
+    };
+  }
+
   socket.on('delete-visitor-by-name', ({ name, index }) => {
-    visitors[name] = [
-      ...visitors[name].slice(0, index),
-      ...visitors[name].slice(index + 1),
+    deleteVisitorByName(name, index);
+  });
+
+  // messages
+  socket.on('pull-messages', () => {
+    socket.emit('push-messages', messages.data);
+  });
+
+  socket.on('add-message', ({ type, payload: { name, visitorIndex } }) => {
+    let message = '';
+    if (type === 'call') {
+      message = `${name} 呼叫秘书。`;
+    }
+
+    if (type === 'resolve') {
+      message = `${name} 需要接见 ${visitors.data[name][visitorIndex].name}。`;
+      deleteVisitorByName(name, visitorIndex);
+    }
+
+    if (type === 'reject') {
+      message = `${name} 拒绝接见 ${visitors.data[name][visitorIndex].name}。`;
+      deleteVisitorByName(name, visitorIndex);
+    }
+
+    if (!message) return;
+    message = `[${new Date().toLocaleString()}] ${message}`;
+    messages.data = [message, ...messages.data];
+  });
+
+  socket.on('remove-message', (index) => {
+    messages.data = [
+      ...messages.data.slice(0, index),
+      ...messages.data.slice(index + 1),
     ];
-    visitorsChange();
   });
 });
