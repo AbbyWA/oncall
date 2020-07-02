@@ -3,6 +3,7 @@ import Server from 'socket.io';
 import Store from 'electron-store';
 import data from './data.json';
 import config from '../config';
+import { VisitorStatus } from '../constants';
 
 const store = new Store();
 const io = new Server(config.port, { serveClient: false });
@@ -62,7 +63,6 @@ io.on('connect', (socket) => {
   });
 
   function deleteVisitorByName(name, index) {
-    console.log(name, index);
     visitors.data = {
       ...visitors.data,
       [name]: [
@@ -88,13 +88,35 @@ io.on('connect', (socket) => {
     }
 
     if (type === 'resolve') {
+      visitors.data = {
+        ...visitors.data,
+        [name]: [
+          ...visitors.data[name].slice(0, visitorIndex),
+          {
+            ...visitors.data[name][visitorIndex],
+            status: VisitorStatus.RESOLVE,
+          },
+          ...visitors.data[name].slice(visitorIndex + 1),
+        ],
+      };
       message = `${name} 需要接见 ${visitors.data[name][visitorIndex].name}。`;
-      deleteVisitorByName(name, visitorIndex);
+      // deleteVisitorByName(name, visitorIndex);
     }
 
     if (type === 'reject') {
+      visitors.data = {
+        ...visitors.data,
+        [name]: [
+          ...visitors.data[name].slice(0, visitorIndex),
+          {
+            ...visitors.data[name][visitorIndex],
+            status: VisitorStatus.REJECT,
+          },
+          ...visitors.data[name].slice(visitorIndex + 1),
+        ],
+      };
       message = `${name} 拒绝接见 ${visitors.data[name][visitorIndex].name}。`;
-      deleteVisitorByName(name, visitorIndex);
+      // deleteVisitorByName(name, visitorIndex);
     }
 
     if (!message) return;

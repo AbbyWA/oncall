@@ -7,9 +7,12 @@ import ListItemText from '@material-ui/core/ListItemText';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import Chip from '@material-ui/core/Chip';
+import Alert from '@material-ui/lab/Alert';
+
 import { makeStyles } from '@material-ui/core/styles';
 import client from '../client';
 import { VisitorStatus } from '../constants';
+import useToday from './useToday';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -19,7 +22,7 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     textAlign: 'center',
     color: theme.palette.text.secondary,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
 }));
 
@@ -33,6 +36,7 @@ export default function Home(): JSX.Element {
     summary: '',
   });
   const [messages, setMessages] = useState([]);
+  const [today] = useToday();
 
   useEffect(() => {
     client.emit('pull-leader-list');
@@ -56,14 +60,28 @@ export default function Home(): JSX.Element {
   }, []);
 
   return (
-    <div data-tid="container" style={{ height: '100vh' }}>
-      <Grid
-        container
-        spacing={3}
-        style={{ height: '70%', overflowY: 'auto', overflowX: 'hidden' }}
+    <div data-tid="container" style={{ height: '100vh', padding: '10px' }}>
+      <Alert
+        icon={false}
+        severity="info"
+        style={{
+          marginBottom: '10px',
+          backgroundColor: 'transparent',
+        }}
       >
-        <Grid item xs={3}>
-          <Paper className={classes.paper}>
+        {today}
+      </Alert>
+      <Grid container spacing={3} style={{ height: '60%' }}>
+        <Grid item xs={3} style={{ height: '100%', boxSizing: 'border-box' }}>
+          <Paper
+            className={classes.paper}
+            style={{
+              height: '100%',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              boxSizing: 'border-box',
+            }}
+          >
             <List component="nav" aria-label="secondary mailbox folder">
               {leaderList.map(({ name }) => (
                 <ListItem
@@ -80,10 +98,15 @@ export default function Home(): JSX.Element {
             </List>
           </Paper>
         </Grid>
-        <Grid item xs={9}>
+        <Grid item xs={9} style={{ height: '100%', boxSizing: 'border-box' }}>
           <Paper
             className={classes.paper}
-            style={{ paddingTop: '20px', textAlign: 'left' }}
+            style={{
+              boxSizing: 'border-box',
+              paddingTop: '20px',
+              textAlign: 'left',
+              height: '100%',
+            }}
           >
             <div>
               <TextField
@@ -128,31 +151,39 @@ export default function Home(): JSX.Element {
                 添加
               </Button>
             </div>
-            <List component="nav" aria-label="secondary mailbox folder">
+            <List
+              component="nav"
+              aria-label="secondary mailbox folder"
+              style={{
+                height: 'calc(100%  -  56px)',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+              }}
+            >
               {(visitors[selected] || []).map(
                 ({ name, summary, time, status }, index) => (
                   <ListItem key={`${name} ${summary} ${time}`}>
                     <Chip
                       label={status}
-                      variant="outlined"
+                      variant="default"
                       color={
                         // eslint-disable-next-line no-nested-ternary
-                        status === 'resolve'
+                        status === VisitorStatus.RESOLVE
                           ? 'primary'
-                          : status === 'reject'
+                          : status === VisitorStatus.REJECT
                           ? 'secondary'
                           : 'default'
                       }
                       style={{ marginRight: '10px' }}
                     />
                     <ListItemText
-                      primary={`[${new Date(
-                        time
-                      ).toLocaleString()}] ${name} ${summary}`}
+                      primary={`${new Date(time).pattern(
+                        'MM-dd hh:mm:ss'
+                      )} ${name} ${summary}`}
                     />
 
                     <Button
-                      variant="contained"
+                      // variant="contained"
                       color="secondary"
                       onClick={() => {
                         client.emit('delete-visitor-by-name', {
@@ -173,8 +204,8 @@ export default function Home(): JSX.Element {
       <Paper
         className={classes.paper}
         style={{
-          marginTop: '1%',
-          height: '25%',
+          marginTop: '20px',
+          height: '24%',
           overflowY: 'auto',
           overflowX: 'hidden',
         }}
