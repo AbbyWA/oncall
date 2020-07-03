@@ -10,10 +10,11 @@ const io = new Server(config.port, { serveClient: false });
 io.origins('*:*');
 
 class Domain {
-  constructor(key, broadcastMessage, init) {
+  constructor(key, broadcastMessage, init, clearExpiredData = (x) => x) {
     this._data = store.get(key);
     this.key = key;
     this.broadcastMessage = broadcastMessage;
+    this.clearExpiredData = clearExpiredData;
 
     if (!this._data) {
       this._data = init();
@@ -25,11 +26,16 @@ class Domain {
     io.emit(this.broadcastMessage, this._data);
   }
 
+  clear() {
+    this._data = this.clearExpiredData(this._data);
+  }
+
   get data() {
     return this._data;
   }
 
   set data(value) {
+    // this.clear();
     this._data = value;
 
     console.log(this.key, this._data);
@@ -37,12 +43,27 @@ class Domain {
   }
 }
 
-const visitors = new Domain('visitors', 'push-visitor-list', () => {
-  return data.leaders.reduce((memo, { name }) => {
-    memo[name] = [];
-    return memo;
-  }, {});
-});
+const visitors = new Domain(
+  'visitors',
+  'push-visitor-list',
+  () => {
+    return data.leaders.reduce((memo, { name }) => {
+      memo[name] = [];
+      return memo;
+    }, {});
+  },
+  (value) => {
+    const today = new Date();
+    today.setHours(0);
+    today.setMinutes(0);
+    today.setSeconds(0);
+    Object.keys(value).forEach((key) => {
+      value[key] = value[key].filter((item) => item.time > today.getTime());
+    });
+
+    return value;
+  }
+);
 const messages = new Domain('messages', 'push-messages', () => []);
 
 io.on('connect', (socket) => {
@@ -72,6 +93,20 @@ io.on('connect', (socket) => {
     };
   }
 
+  function changeVisitorStatus(name, index, newStatus) {
+    visitors.data = {
+      ...visitors.data,
+      [name]: [
+        ...visitors.data[name].slice(0, index),
+        {
+          ...visitors.data[name][index],
+          status: newStatus,
+        },
+        ...visitors.data[name].slice(index + 1),
+      ],
+    };
+  }
+
   socket.on('delete-visitor-by-name', ({ name, index }) => {
     deleteVisitorByName(name, index);
   });
@@ -81,50 +116,45 @@ io.on('connect', (socket) => {
     socket.emit('push-messages', messages.data);
   });
 
-  socket.on('add-message', ({ type, payload: { name, visitorIndex } }) => {
-    let message = '';
-    if (type === 'call') {
-      message = `${name} 呼叫秘书。`;
-    }
-
+  socket.on('add-message', ({ type, payload }) => {
     if (type === 'resolve') {
-      visitors.data = {
-        ...visitors.data,
-        [name]: [
-          ...visitors.data[name].slice(0, visitorIndex),
-          {
-            ...visitors.data[name][visitorIndex],
-            status: VisitorStatus.RESOLVE,
-          },
-          ...visitors.data[name].slice(visitorIndex + 1),
-        ],
-      };
-      message = `${name} 需要接见 ${visitors.data[name][visitorIndex].name}。`;
-      // deleteVisitorByName(name, visitorIndex);
+      // 修改visitor状态
+      changeVisitorStatus(
+        payload.name,
+        payload.visitorIndex,
+        VisitorStatus.RESOLVE
+      );
     }
 
     if (type === 'reject') {
-      visitors.data = {
-        ...visitors.data,
-        [name]: [
-          ...visitors.data[name].slice(0, visitorIndex),
-          {
-            ...visitors.data[name][visitorIndex],
-            status: VisitorStatus.REJECT,
-          },
-          ...visitors.data[name].slice(visitorIndex + 1),
-        ],
-      };
-      message = `${name} 拒绝接见 ${visitors.data[name][visitorIndex].name}。`;
-      // deleteVisitorByName(name, visitorIndex);
+      changeVisitorStatus(
+        payload.name,
+        payload.visitorIndex,
+        VisitorStatus.REJECT
+      );
     }
 
-    if (!message) return;
-    message = `[${new Date().toLocaleString()}] ${message}`;
-    messages.data = [message, ...messages.data];
+    messages.data = [
+      {
+        type,
+        payload,
+        time: new Date().getTime(),
+      },
+      ...messages.data,
+    ];
   });
 
   socket.on('remove-message', (index) => {
+    const message = messages.data[index];
+    if (message.type === 'resolve' || message.type === 'reject') {
+      const { name } = message.payload;
+      visitors.data = {
+        ...visitors.data,
+        [name]: visitors.data[name].filter(
+          (item) => item.name !== message.payload.visitorName
+        ),
+      };
+    }
     messages.data = [
       ...messages.data.slice(0, index),
       ...messages.data.slice(index + 1),

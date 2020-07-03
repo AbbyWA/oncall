@@ -12,6 +12,8 @@ import InputLabel from '@material-ui/core/InputLabel';
 import FormControl from '@material-ui/core/FormControl';
 import Alert from '@material-ui/lab/Alert';
 import CheckIcon from '@material-ui/icons/Check';
+import { Scrollbars } from 'react-custom-scrollbars';
+
 import { makeStyles } from '@material-ui/core/styles';
 import client from '../client';
 import useToday from './useToday';
@@ -55,6 +57,14 @@ export default function Leader(): JSX.Element {
       setVisitors(payload);
     });
   }, []);
+
+  useEffect(() => {
+    if (!name) {
+      document.title = `Hello!`;
+    } else {
+      document.title = `Hello, ${name}!`;
+    }
+  }, [name]);
 
   if (!name) {
     return (
@@ -159,91 +169,104 @@ export default function Leader(): JSX.Element {
           >
             {message}
           </Alert>
-          <List component="nav" aria-label="secondary mailbox folder">
-            {(visitors[name] || []).map(
-              // eslint-disable-next-line no-shadow
-              ({ name: visitorName, summary, time, status }, index) => (
-                <ListItem
-                  key={`${visitorName} ${summary} ${time}`}
-                  button
-                  selected={selectedIndex === index}
-                  onClick={() => {
-                    if (selectedIndex !== index) {
-                      setSelectedIndex(index);
-                    } else {
-                      setSelectedIndex(-1);
-                    }
-                  }}
-                >
-                  <Chip
-                    label={status}
-                    variant="outlined"
-                    color={
-                      // eslint-disable-next-line no-nested-ternary
-                      status === VisitorStatus.RESOLVE
-                        ? 'primary'
-                        : status === VisitorStatus.REJECT
-                        ? 'secondary'
-                        : 'default'
-                    }
-                    style={{ marginRight: '10px' }}
-                  />
-                  <ListItemText
-                    primary={`${new Date(time).pattern(
-                      'MM-dd hh:mm:ss'
-                    )} ${visitorName} ${summary}`}
-                  />
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    style={{
-                      marginRight: '10px',
-                      visibility:
-                        selectedIndex === index &&
-                        status === VisitorStatus.PENDING
-                          ? 'visible'
-                          : 'hidden',
-                    }}
-                    onClick={() => {
-                      client.emit('add-message', {
-                        type: 'resolve',
-                        payload: {
-                          name,
-                          visitorIndex: index,
-                        },
-                      });
-                      showMessage('已通知秘书，请稍等！');
-                    }}
-                  >
-                    接见
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="secondary"
-                    style={{
-                      visibility:
-                        selectedIndex === index &&
-                        status === VisitorStatus.PENDING
-                          ? 'visible'
-                          : 'hidden',
-                    }}
-                    onClick={() => {
-                      client.emit('add-message', {
-                        type: 'reject',
-                        payload: {
-                          name,
-                          visitorIndex: index,
-                        },
-                      });
-                      showMessage('已通知秘书，请稍等！');
-                    }}
-                  >
-                    拒绝
-                  </Button>
-                </ListItem>
-              )
+          <Scrollbars
+            autoHide
+            style={{
+              height: 'calc(100%  -  96px)',
+            }}
+          >
+            {(visitors[name] || []).length === 0 ? (
+              <div>暂时没有访客~</div>
+            ) : (
+              <List component="nav" aria-label="secondary mailbox folder">
+                {(visitors[name] || []).map(
+                  // eslint-disable-next-line no-shadow
+                  ({ name: visitorName, summary, time, status }, index) => (
+                    <ListItem
+                      key={`${visitorName} ${summary} ${time}`}
+                      button
+                      selected={selectedIndex === index}
+                      onClick={() => {
+                        if (selectedIndex !== index) {
+                          setSelectedIndex(index);
+                        } else {
+                          setSelectedIndex(-1);
+                        }
+                      }}
+                    >
+                      <Chip
+                        label={status}
+                        variant="outlined"
+                        color={
+                          // eslint-disable-next-line no-nested-ternary
+                          status === VisitorStatus.RESOLVE
+                            ? 'primary'
+                            : status === VisitorStatus.REJECT
+                            ? 'secondary'
+                            : 'default'
+                        }
+                        style={{ marginRight: '10px' }}
+                      />
+                      <ListItemText
+                        primary={`${new Date(time).pattern(
+                          'hh:mm:ss'
+                        )} ${visitorName} ${summary}`}
+                      />
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        style={{
+                          marginRight: '10px',
+                          visibility:
+                            selectedIndex === index &&
+                            status === VisitorStatus.PENDING
+                              ? 'visible'
+                              : 'hidden',
+                        }}
+                        onClick={() => {
+                          client.emit('add-message', {
+                            type: 'resolve',
+                            payload: {
+                              name,
+                              visitorIndex: index,
+                              visitorName,
+                            },
+                          });
+                          showMessage('已通知秘书，请稍等！');
+                        }}
+                      >
+                        接见
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        style={{
+                          visibility:
+                            selectedIndex === index &&
+                            status === VisitorStatus.PENDING
+                              ? 'visible'
+                              : 'hidden',
+                        }}
+                        onClick={() => {
+                          client.emit('add-message', {
+                            type: 'reject',
+                            payload: {
+                              name,
+                              visitorIndex: index,
+                              visitorName,
+                            },
+                          });
+                          showMessage('已通知秘书，请稍等！');
+                        }}
+                      >
+                        拒绝
+                      </Button>
+                    </ListItem>
+                  )
+                )}
+              </List>
             )}
-          </List>
+          </Scrollbars>
         </Paper>
       </Grid>
     </div>

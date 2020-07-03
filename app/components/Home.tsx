@@ -8,6 +8,7 @@ import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import Chip from '@material-ui/core/Chip';
 import Alert from '@material-ui/lab/Alert';
+import { Scrollbars } from 'react-custom-scrollbars';
 
 import { makeStyles } from '@material-ui/core/styles';
 import client from '../client';
@@ -55,6 +56,9 @@ export default function Home(): JSX.Element {
     client.on('push-messages', (payload) => {
       // eslint-disable-next-line no-console
       console.log(payload);
+      if (payload.length > messages.length) {
+        document.getElementById('message-audio').play();
+      }
       setMessages(payload);
     });
   }, []);
@@ -77,25 +81,25 @@ export default function Home(): JSX.Element {
             className={classes.paper}
             style={{
               height: '100%',
-              overflowY: 'auto',
-              overflowX: 'hidden',
               boxSizing: 'border-box',
             }}
           >
-            <List component="nav" aria-label="secondary mailbox folder">
-              {leaderList.map(({ name }) => (
-                <ListItem
-                  key={name}
-                  button
-                  selected={selected === name}
-                  onClick={() => {
-                    setSelected(name);
-                  }}
-                >
-                  <ListItemText primary={name} />
-                </ListItem>
-              ))}
-            </List>
+            <Scrollbars autoHide>
+              <List component="nav" aria-label="secondary mailbox folder">
+                {leaderList.map(({ name }) => (
+                  <ListItem
+                    key={name}
+                    button
+                    selected={selected === name}
+                    onClick={() => {
+                      setSelected(name);
+                    }}
+                  >
+                    <ListItemText primary={name} />
+                  </ListItem>
+                ))}
+              </List>
+            </Scrollbars>
           </Paper>
         </Grid>
         <Grid item xs={9} style={{ height: '100%', boxSizing: 'border-box' }}>
@@ -151,53 +155,52 @@ export default function Home(): JSX.Element {
                 添加
               </Button>
             </div>
-            <List
-              component="nav"
-              aria-label="secondary mailbox folder"
+            <Scrollbars
+              autoHide
               style={{
                 height: 'calc(100%  -  56px)',
-                overflowY: 'auto',
-                overflowX: 'hidden',
               }}
             >
-              {(visitors[selected] || []).map(
-                ({ name, summary, time, status }, index) => (
-                  <ListItem key={`${name} ${summary} ${time}`}>
-                    <Chip
-                      label={status}
-                      variant="default"
-                      color={
-                        // eslint-disable-next-line no-nested-ternary
-                        status === VisitorStatus.RESOLVE
-                          ? 'primary'
-                          : status === VisitorStatus.REJECT
-                          ? 'secondary'
-                          : 'default'
-                      }
-                      style={{ marginRight: '10px' }}
-                    />
-                    <ListItemText
-                      primary={`${new Date(time).pattern(
-                        'MM-dd hh:mm:ss'
-                      )} ${name} ${summary}`}
-                    />
+              <List component="nav" aria-label="secondary mailbox folder">
+                {(visitors[selected] || []).map(
+                  ({ name, summary, time, status }, index) => (
+                    <ListItem key={`${name} ${summary} ${time}`}>
+                      <Chip
+                        label={status}
+                        variant="default"
+                        color={
+                          // eslint-disable-next-line no-nested-ternary
+                          status === VisitorStatus.RESOLVE
+                            ? 'primary'
+                            : status === VisitorStatus.REJECT
+                            ? 'secondary'
+                            : 'default'
+                        }
+                        style={{ marginRight: '10px' }}
+                      />
+                      <ListItemText
+                        primary={`${new Date(time).pattern(
+                          'hh:mm:ss'
+                        )} ${name} ${summary}`}
+                      />
 
-                    <Button
-                      // variant="contained"
-                      color="secondary"
-                      onClick={() => {
-                        client.emit('delete-visitor-by-name', {
-                          name: selected,
-                          index,
-                        });
-                      }}
-                    >
-                      清除
-                    </Button>
-                  </ListItem>
-                )
-              )}
-            </List>
+                      <Button
+                        // variant="contained"
+                        color="secondary"
+                        onClick={() => {
+                          client.emit('delete-visitor-by-name', {
+                            name: selected,
+                            index,
+                          });
+                        }}
+                      >
+                        清除
+                      </Button>
+                    </ListItem>
+                  )
+                )}
+              </List>
+            </Scrollbars>
           </Paper>
         </Grid>
       </Grid>
@@ -206,26 +209,50 @@ export default function Home(): JSX.Element {
         style={{
           marginTop: '20px',
           height: '24%',
-          overflowY: 'auto',
-          overflowX: 'hidden',
         }}
       >
-        <List component="nav" aria-label="secondary mailbox folder">
-          {messages.map((message, index) => (
-            <ListItem key={message}>
-              <ListItemText primary={message} />
-              <Button
-                variant="outlined"
-                color="primary"
-                onClick={() => {
-                  client.emit('remove-message', index);
-                }}
-              >
-                知道了
-              </Button>
-            </ListItem>
-          ))}
-        </List>
+        <Scrollbars
+          autoHide
+          style={{
+            height: '100%',
+          }}
+        >
+          {messages.length === 0 ? (
+            <div>暂时木有消息~</div>
+          ) : (
+            <List component="nav" aria-label="secondary mailbox folder">
+              {messages.map(
+                ({ type, payload: { name, visitorName }, time }, index) => {
+                  let message = '';
+                  if (type === 'call') {
+                    message = `${name} 呼叫秘书`;
+                  }
+                  if (type === 'resolve') {
+                    message = `${name} 需要接见 ${visitorName}`;
+                  }
+                  if (type === 'reject') {
+                    message = `${name} 拒绝接见 ${visitorName}`;
+                  }
+                  message = `${new Date(time).pattern('hh:mm:ss')} ${message}`;
+                  return (
+                    <ListItem key={message}>
+                      <ListItemText primary={message} />
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => {
+                          client.emit('remove-message', index);
+                        }}
+                      >
+                        知道了
+                      </Button>
+                    </ListItem>
+                  );
+                }
+              )}
+            </List>
+          )}
+        </Scrollbars>
       </Paper>
     </div>
   );
