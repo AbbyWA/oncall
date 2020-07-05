@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
@@ -10,14 +11,20 @@ import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 import InputLabel from '@material-ui/core/InputLabel';
 import FormControl from '@material-ui/core/FormControl';
+
+import FormGroup from '@material-ui/core/FormGroup';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Alert from '@material-ui/lab/Alert';
 import CheckIcon from '@material-ui/icons/Check';
+import Switch from '@material-ui/core/Switch';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import Dialog from '@material-ui/core/Dialog';
 import { Scrollbars } from 'react-custom-scrollbars';
 
 import { makeStyles } from '@material-ui/core/styles';
 import client from '../client';
 import useToday from './useToday';
-import { VisitorStatus } from '../constants';
+import { VisitorStatus, LeaderStatus } from '../constants';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -35,6 +42,30 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+function SimpleDialog({ onClose, open, onItemClick }) {
+  const rejectReaseon = ['下午再来', '明天再来'];
+
+  return (
+    <Dialog aria-labelledby="simple-dialog-title" onClose={onClose} open={open}>
+      <DialogTitle id="simple-dialog-title">拒绝理由：</DialogTitle>
+      <List style={{ width: '500px' }}>
+        {rejectReaseon.map((item) => (
+          <ListItem
+            key={item}
+            button
+            onClick={() => {
+              onItemClick(item);
+              onClose();
+            }}
+          >
+            <ListItemText primary={item} />
+          </ListItem>
+        ))}
+      </List>
+    </Dialog>
+  );
+}
+
 export default function Leader(): JSX.Element {
   const classes = useStyles();
   const [leaderList, setLeaderList] = useState([]);
@@ -42,6 +73,8 @@ export default function Leader(): JSX.Element {
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
   const [selectedIndex, setSelectedIndex] = React.useState(-1);
+  const [unavailable, setUnavailable] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
   const [today] = useToday();
 
   useEffect(() => {
@@ -49,6 +82,7 @@ export default function Leader(): JSX.Element {
     client.emit('pull-visitor-list');
 
     client.on('push-leader-list', (payload) => {
+      console.log(payload);
       setLeaderList(payload);
     });
     client.on('push-visitor-list', (payload) => {
@@ -87,7 +121,14 @@ export default function Leader(): JSX.Element {
             id="name-select"
             value={name}
             onChange={(e) => {
-              setName(e.target.value);
+              const name = e.target.value;
+              client.emit('change-leader-status', {
+                index: leaderList.indexOf(
+                  leaderList.filter((item) => item.name === name)[0]
+                ),
+                newStatus: LeaderStatus.ONLINE,
+              });
+              setName(name);
             }}
           >
             {
@@ -112,7 +153,14 @@ export default function Leader(): JSX.Element {
   };
 
   return (
-    <div data-tid="container">
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events
+    <div
+      data-tid="container"
+      onClick={() => {
+        setSelectedIndex(-1);
+      }}
+    >
       <Grid container spacing={3}>
         <Paper
           className={classes.paper}
@@ -128,6 +176,35 @@ export default function Leader(): JSX.Element {
             }}
           >
             <span>{today}</span>
+
+            <FormGroup
+              style={{
+                position: 'absolute',
+                right: '210px',
+                top: '26px',
+              }}
+            >
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={unavailable}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      client.emit('change-leader-status', {
+                        index: leaderList.indexOf(
+                          leaderList.filter((item) => item.name === name)[0]
+                        ),
+                        newStatus: checked
+                          ? LeaderStatus.UNAVAILABLE
+                          : LeaderStatus.ONLINE,
+                      });
+                      setUnavailable(checked);
+                    }}
+                  />
+                }
+                label="暂停会客"
+              />
+            </FormGroup>
             <Button
               variant="contained"
               color="primary"
@@ -154,6 +231,12 @@ export default function Leader(): JSX.Element {
               }}
               onClick={() => {
                 setName('');
+                client.emit('change-leader-status', {
+                  index: leaderList.indexOf(
+                    leaderList.filter((item) => item.name === name)[0]
+                  ),
+                  newStatus: LeaderStatus.OFFLINE,
+                });
               }}
             >
               退出登录
@@ -186,12 +269,9 @@ export default function Leader(): JSX.Element {
                       key={`${visitorName} ${summary} ${time}`}
                       button
                       selected={selectedIndex === index}
-                      onClick={() => {
-                        if (selectedIndex !== index) {
-                          setSelectedIndex(index);
-                        } else {
-                          setSelectedIndex(-1);
-                        }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedIndex(index);
                       }}
                     >
                       <Chip
@@ -248,15 +328,7 @@ export default function Leader(): JSX.Element {
                               : 'hidden',
                         }}
                         onClick={() => {
-                          client.emit('add-message', {
-                            type: 'reject',
-                            payload: {
-                              name,
-                              visitorIndex: index,
-                              visitorName,
-                            },
-                          });
-                          showMessage('已通知秘书，请稍等！');
+                          setOpen(true);
                         }}
                       >
                         拒绝
@@ -267,6 +339,25 @@ export default function Leader(): JSX.Element {
               </List>
             )}
           </Scrollbars>
+          <SimpleDialog
+            open={open}
+            onClose={() => {
+              setOpen(false);
+            }}
+            onItemClick={(reason) => {
+              debugger;
+              client.emit('add-message', {
+                type: 'reject',
+                payload: {
+                  name,
+                  visitorIndex: selectedIndex,
+                  visitorName: visitors[name][selectedIndex].name,
+                  reason,
+                },
+              });
+              showMessage('已通知秘书，请稍等！');
+            }}
+          />
         </Paper>
       </Grid>
     </div>

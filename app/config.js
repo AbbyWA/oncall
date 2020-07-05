@@ -1,5 +1,5 @@
 export default {
-  server: '10.205.20.91',
+  server: '127.0.0.1',
   port: 8900,
   target: 'secretary', // leader secretary
 };

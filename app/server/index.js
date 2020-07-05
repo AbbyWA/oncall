@@ -3,7 +3,7 @@ import Server from 'socket.io';
 import Store from 'electron-store';
 import data from './data.json';
 import config from '../config';
-import { VisitorStatus } from '../constants';
+import { VisitorStatus, LeaderStatus } from '../constants';
 
 const store = new Store();
 const io = new Server(config.port, { serveClient: false });
@@ -43,11 +43,18 @@ class Domain {
   }
 }
 
+const leaders = new Domain('leaders', 'push-leader-list', () => {
+  return data.leaders.map((item) => ({
+    ...item,
+    status: LeaderStatus.OFFLINE,
+  }));
+});
+
 const visitors = new Domain(
   'visitors',
   'push-visitor-list',
   () => {
-    return data.leaders.reduce((memo, { name }) => {
+    return leaders.data.reduce((memo, { name }) => {
       memo[name] = [];
       return memo;
     }, {});
@@ -67,8 +74,25 @@ const visitors = new Domain(
 const messages = new Domain('messages', 'push-messages', () => []);
 
 io.on('connect', (socket) => {
+  socket.on('change-leader-status', ({ index, newStatus }) => {
+    if (newStatus !== LeaderStatus.ONLINE) {
+      visitors.data = {
+        ...visitors.data,
+        [leaders.data[index].name]: [],
+      };
+    }
+    leaders.data = [
+      ...leaders.data.slice(0, index),
+      {
+        ...leaders.data[index],
+        status: newStatus,
+      },
+      ...leaders.data.slice(index + 1),
+    ];
+  });
+
   socket.on('pull-leader-list', () => {
-    socket.emit('push-leader-list', data.leaders);
+    socket.emit('push-leader-list', leaders.data);
   });
 
   // visiters

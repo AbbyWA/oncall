@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 import React, { useState, useEffect } from 'react';
 import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
@@ -8,11 +10,13 @@ import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import Chip from '@material-ui/core/Chip';
 import Alert from '@material-ui/lab/Alert';
+import ListItemIcon from '@material-ui/core/ListItemIcon';
+import AccountCircleIcon from '@material-ui/icons/AccountCircle';
 import { Scrollbars } from 'react-custom-scrollbars';
 
 import { makeStyles } from '@material-ui/core/styles';
 import client from '../client';
-import { VisitorStatus } from '../constants';
+import { VisitorStatus, LeaderStatus } from '../constants';
 import useToday from './useToday';
 
 const useStyles = makeStyles((theme) => ({
@@ -26,6 +30,16 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
 }));
+
+const statusColor = {
+  [LeaderStatus.ONLINE]: 'primary',
+  [LeaderStatus.OFFLINE]: 'disabled',
+  [LeaderStatus.UNAVAILABLE]: 'secondary',
+};
+
+function findLeaderByName(leaders, name) {
+  return leaders.filter((item) => item.name === name)[0];
+}
 
 export default function Home(): JSX.Element {
   const classes = useStyles();
@@ -45,6 +59,8 @@ export default function Home(): JSX.Element {
     client.emit('pull-messages');
 
     client.on('push-leader-list', (payload) => {
+      // eslint-disable-next-line no-console
+      console.log(payload);
       setLeaderList(payload);
       setSelected(payload[0].name);
     });
@@ -86,7 +102,7 @@ export default function Home(): JSX.Element {
           >
             <Scrollbars autoHide>
               <List component="nav" aria-label="secondary mailbox folder">
-                {leaderList.map(({ name }) => (
+                {leaderList.map(({ name, status }) => (
                   <ListItem
                     key={name}
                     button
@@ -95,6 +111,9 @@ export default function Home(): JSX.Element {
                       setSelected(name);
                     }}
                   >
+                    <ListItemIcon>
+                      <AccountCircleIcon color={statusColor[status]} />
+                    </ListItemIcon>
                     <ListItemText primary={name} />
                   </ListItem>
                 ))}
@@ -114,6 +133,10 @@ export default function Home(): JSX.Element {
           >
             <div>
               <TextField
+                disabled={
+                  findLeaderByName(leaderList, selected).status !==
+                  LeaderStatus.ONLINE
+                }
                 id="outlined-name"
                 label="来访者姓名"
                 value={newVisitor.name}
@@ -124,6 +147,10 @@ export default function Home(): JSX.Element {
                 style={{ marginRight: '20px' }}
               />
               <TextField
+                disabled={
+                  findLeaderByName(leaderList, selected).status !==
+                  LeaderStatus.ONLINE
+                }
                 id="outlined-summary"
                 label="事由"
                 value={newVisitor.summary}
@@ -222,7 +249,10 @@ export default function Home(): JSX.Element {
           ) : (
             <List component="nav" aria-label="secondary mailbox folder">
               {messages.map(
-                ({ type, payload: { name, visitorName }, time }, index) => {
+                (
+                  { type, payload: { name, visitorName, reason }, time },
+                  index
+                ) => {
                   let message = '';
                   if (type === 'call') {
                     message = `${name} 呼叫秘书`;
@@ -231,7 +261,7 @@ export default function Home(): JSX.Element {
                     message = `${name} 需要接见 ${visitorName}`;
                   }
                   if (type === 'reject') {
-                    message = `${name} 拒绝接见 ${visitorName}`;
+                    message = `${name} 拒绝接见 ${visitorName} ${reason}`;
                   }
                   message = `${new Date(time).pattern('hh:mm:ss')} ${message}`;
                   return (
