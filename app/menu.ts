@@ -190,7 +190,14 @@ export default class MenuBuilder {
     //     : subMenuViewProd;
     const subMenuView = subMenuViewDev;
 
-    return [subMenuAbout, subMenuEdit, subMenuView, subMenuWindow, subMenuHelp];
+    return [
+      subMenuAbout,
+      subMenuEdit,
+      subMenuView,
+      subMenuWindow,
+      subMenuHelp,
+      subMenuViewDev,
+    ];
   }
 
   buildDefaultTemplate() {
