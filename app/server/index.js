@@ -5,6 +5,8 @@ import data from './data.json';
 import config from '../config';
 import { VisitorStatus, LeaderStatus } from '../constants';
 
+const leaderIndex = 0;
+const leaderStatus = LeaderStatus.OFFLINE;
 const store = new Store();
 const io = new Server(config.port, { serveClient: false });
 io.origins('*:*');
@@ -15,10 +17,15 @@ class Domain {
     this.key = key;
     this.broadcastMessage = broadcastMessage;
     this.clearExpiredData = clearExpiredData;
+    this.init = init;
 
     if (!this._data) {
       this._data = init();
     }
+  }
+
+  resetData() {
+    this.data = this.init();
   }
 
   handleChange() {
@@ -75,6 +82,8 @@ const messages = new Domain('messages', 'push-messages', () => []);
 
 io.on('connect', (socket) => {
   socket.on('change-leader-status', ({ index, newStatus }) => {
+    leaderIndex = index;
+    leaderStatus = newStatus;
     if (newStatus !== LeaderStatus.ONLINE) {
       visitors.data = {
         ...visitors.data,
@@ -107,6 +116,17 @@ io.on('connect', (socket) => {
     };
   });
 
+  socket.on('disconnected', () => {
+    leaders.data = [
+      ...leaders.data.slice(0, leaderIndex),
+      {
+        ...leaders.data[leaderIndex],
+        status: leaderStatus,
+      },
+      ...leaders.data.slice(leaderIndex + 1),
+    ];
+  });
+
   function deleteVisitorByName(name, index) {
     visitors.data = {
       ...visitors.data,
@@ -136,6 +156,10 @@ io.on('connect', (socket) => {
 
   socket.on('delete-visitor-by-name', ({ name, index }) => {
     deleteVisitorByName(name, index);
+  });
+
+  socket.on('clear-visitors',() => {
+    visitors.resetData();
   });
 
   // messages

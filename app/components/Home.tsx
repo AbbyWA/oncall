@@ -182,7 +182,18 @@ export default function Home(): JSX.Element {
               >
                 添加
               </Button>
+              <Button
+                variant="contained"
+                color="secondary"
+                style={{ marginLeft: '10px' }}
+                onClick={() => {
+                  client.emit('clear-visitors',{});
+                }}
+            >
+              一键清除
+            </Button>
             </div>
+
             <Scrollbars
               autoHide
               style={{
