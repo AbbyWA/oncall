@@ -62,6 +62,9 @@
       "main.prod.js.map",
       "package.json"
     ],
+    "electronDownload": {
+      "mirror": "https://npm.taobao.org/mirrors/electron/"
+    },
     "dmg": {
       "contents": [
         {

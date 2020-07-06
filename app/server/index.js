@@ -118,6 +118,9 @@ io.on('connect', (socket) => {
   }
 
   function changeVisitorStatus(name, index, newStatus) {
+
+ //   if(visitors.data[name].filter((item) => item.name === "所有人")) return {};
+ //   debugger;
     visitors.data = {
       ...visitors.data,
       [name]: [

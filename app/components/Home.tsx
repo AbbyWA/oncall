@@ -38,6 +38,7 @@ const statusColor = {
 };
 
 function findLeaderByName(leaders, name) {
+  if (!name) return{};
   return leaders.filter((item) => item.name === name)[0];
 }
 
@@ -261,6 +262,9 @@ export default function Home(): JSX.Element {
                     message = `${name} 需要接见 ${visitorName}`;
                   }
                   if (type === 'reject') {
+                    message = `${name} 拒绝接见 ${visitorName} ${reason}`;
+                  }
+                  if(type === 'holdon') {
                     message = `${name} 拒绝接见 ${visitorName} ${reason}`;
                   }
                   message = `${new Date(time).pattern('hh:mm:ss')} ${message}`;

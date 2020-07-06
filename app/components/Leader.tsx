@@ -43,7 +43,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 function SimpleDialog({ onClose, open, onItemClick }) {
-  const rejectReaseon = ['下午再来', '明天再来'];
+  const rejectReaseon = ['下午再来', '明天再来','改期'];
 
   return (
     <Dialog aria-labelledby="simple-dialog-title" onClose={onClose} open={open}>
@@ -76,6 +76,7 @@ export default function Leader(): JSX.Element {
   const [unavailable, setUnavailable] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [today] = useToday();
+  const [holdChecked,setChecked]=React.useState(true);
 
   useEffect(() => {
     client.emit('pull-leader-list');
@@ -126,7 +127,7 @@ export default function Leader(): JSX.Element {
                 index: leaderList.indexOf(
                   leaderList.filter((item) => item.name === name)[0]
                 ),
-                newStatus: LeaderStatus.ONLINE,
+                newStatus: unavailable? LeaderStatus.UNAVAILABLE:LeaderStatus.ONLINE,
               });
               setName(name);
             }}
@@ -190,7 +191,10 @@ export default function Leader(): JSX.Element {
                     checked={unavailable}
                     onChange={(event) => {
                       const checked = event.target.checked;
-                      client.emit('change-leader-status', {
+                      if(checked){
+                        setOpen(true);
+                      }else{
+                        client.emit('change-leader-status', {
                         index: leaderList.indexOf(
                           leaderList.filter((item) => item.name === name)[0]
                         ),
@@ -198,6 +202,9 @@ export default function Leader(): JSX.Element {
                           ? LeaderStatus.UNAVAILABLE
                           : LeaderStatus.ONLINE,
                       });
+                      }
+
+                      setChecked(checked);
                       setUnavailable(checked);
                     }}
                   />
@@ -345,16 +352,35 @@ export default function Leader(): JSX.Element {
               setOpen(false);
             }}
             onItemClick={(reason) => {
-              debugger;
-              client.emit('add-message', {
-                type: 'reject',
-                payload: {
-                  name,
-                  visitorIndex: selectedIndex,
-                  visitorName: visitors[name][selectedIndex].name,
-                  reason,
-                },
-              });
+              if(holdChecked){
+                client.emit('change-leader-status', {
+                    index: leaderList.indexOf(
+                      leaderList.filter((item) => item.name === name)[0]
+                    ),
+                    newStatus: holdChecked
+                      ? LeaderStatus.UNAVAILABLE
+                      : LeaderStatus.ONLINE,
+                  });
+                  client.emit('add-message', { type: 'holdon', payload: {
+                    name,
+                    visitorIndex: selectedIndex,
+                    visitorName: '所有人',
+                    reason,
+                  },
+                });
+              }else{
+                debugger;
+                client.emit('add-message', {
+                  type: 'reject',
+                  payload: {
+                    name,
+                    visitorIndex: selectedIndex,
+                    visitorName: visitors[name][selectedIndex].name,
+                    reason,
+                  },
+                });
+              }
+
               showMessage('已通知秘书，请稍等！');
             }}
           />
