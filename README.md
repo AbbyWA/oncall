@@ -2,7 +2,7 @@
 
 ```bash
 npm install -g yarn
-git clone --depth 1 --single-branch https://github.com/footman101/oncall.git
+git clone --depth 1 --single-branch https://github.com/AbbyWA/oncall.git
 cd oncall
 yarn
 ```
