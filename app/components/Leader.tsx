@@ -47,35 +47,28 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const rejectReaseon= ['下午再来', '明天再来','改期'];
-const callReason= ['请倒杯水', '请倒杯咖啡','秘书来办公室'];
+function SimpleDialog({ onClose, open, onItemClick }) {
+  const rejectReaseon = ['下午再来', '明天再来','改期'];
 
-function SimpleDialog({ onClose, open, onItemClick, reasons}) {
-
-  const Reaseon: any[] = [];
-
-    return (
-      <Dialog aria-labelledby="simple-dialog-title" onClose={onClose} open={open}>
-        <DialogTitle id="simple-dialog-title">理由</DialogTitle>
-        <List style={{ width: '500px' }}>
-          {
-            reasons();
-          }
-          {Reaseon.map((item) => (
-              <ListItem
-              key={item}
-              button
-              onClick={() => {
-                onItemClick(item);
-                onClose();
-              }}
-            >
-              <ListItemText primary={item} />
-            </ListItem>
-            ))}
-        </List>
-      </Dialog>
-    );
+  return (
+    <Dialog aria-labelledby="simple-dialog-title" onClose={onClose} open={open}>
+      <DialogTitle id="simple-dialog-title">拒绝理由：</DialogTitle>
+      <List style={{ width: '500px' }}>
+        {rejectReaseon.map((item) => (
+          <ListItem
+            key={item}
+            button
+            onClick={() => {
+              onItemClick(item);
+              onClose();
+            }}
+          >
+            <ListItemText primary={item} />
+          </ListItem>
+        ))}
+      </List>
+    </Dialog>
+  );
 }
 
 export default function Leader(): JSX.Element {
@@ -238,9 +231,7 @@ export default function Leader(): JSX.Element {
                 top: '26px',
               }}
               onClick={() => {
-                setCalled(true);
-                setOpen(true);
-                //client.emit('add-message', { type: 'call', payload: { name } });
+                client.emit('add-message', { type: 'call', payload: { name } });
                 showMessage('已呼叫，请稍等!');
               }}
             >
@@ -401,14 +392,6 @@ export default function Leader(): JSX.Element {
                     reason,
                   },
                 });
-              }else if(callsecurtary){
-                setCalled(false);
-                client.emit('add-message', { type: 'call', payload: {
-                  name,
-                  visitorIndex: selectedIndex,
-                  visitorName: '秘书',
-                  reason,
-                 } });
               }else{
                 debugger;
                 client.emit('add-message', {
@@ -423,13 +406,6 @@ export default function Leader(): JSX.Element {
               }
 
               showMessage('已通知秘书，请稍等！');
-            }}
-            reasons={()=>{
-              if(callsecurtary){
-                Reaseon = rejectReaseon;
-              }else{
-                Reaseon = callReason;
-              }
             }}
           />
         </Paper>

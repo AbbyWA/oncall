@@ -20,7 +20,7 @@ const darkTheme = createMuiTheme({
     },
   },
   typography: {
-    fontSize: 22,
+    fontSize: 14,
   },
 });
 

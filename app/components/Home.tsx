@@ -145,7 +145,10 @@ export default function Home(): JSX.Element {
                   setNewVisitor({ ...newVisitor, name: event.target.value });
                 }}
                 variant="outlined"
-                style={{ marginRight: '20px' }}
+                style={{
+                  marginRight: '20px',
+                  width: '150px'
+                }}
               />
               <TextField
                 disabled={
@@ -185,7 +188,7 @@ export default function Home(): JSX.Element {
               <Button
                 variant="contained"
                 color="secondary"
-                style={{ marginLeft: '10px' }}
+                style={{ marginLeft: '160px' }}
                 onClick={() => {
                   client.emit('clear-visitors',{});
                 }}
