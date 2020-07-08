@@ -147,7 +147,7 @@ export default function Home(): JSX.Element {
                 variant="outlined"
                 style={{
                   marginRight: '20px',
-                  width: '150px'
+                  width: '100px'
                 }}
               />
               <TextField
@@ -165,7 +165,10 @@ export default function Home(): JSX.Element {
                   });
                 }}
                 variant="outlined"
-                style={{ marginRight: '20px' }}
+                style={{
+                  marginRight: '20px',
+                  width: '500px'
+                }}
               />
               <Button
                 variant="contained"
@@ -188,7 +191,7 @@ export default function Home(): JSX.Element {
               <Button
                 variant="contained"
                 color="secondary"
-                style={{ marginLeft: '160px' }}
+                style={{ marginLeft: '110px' }}
                 onClick={() => {
                   client.emit('clear-visitors',{});
                 }}
