@@ -40,30 +40,42 @@ const useStyles = makeStyles((theme) => ({
     margin: theme.spacing(1),
     minWidth: 120,
   },
+  listItemText: {
+    color: theme.palette.text.primary,
+    marginRight: '190px',
+    //position: 'absolute',
+  },
 }));
 
-function SimpleDialog({ onClose, open, onItemClick }) {
-  const rejectReaseon = ['下午再来', '明天再来','改期'];
+const rejectReaseon= ['下午再来', '明天再来','改期'];
+const callReason= ['请倒杯水', '请倒杯咖啡','秘书来办公室'];
 
-  return (
-    <Dialog aria-labelledby="simple-dialog-title" onClose={onClose} open={open}>
-      <DialogTitle id="simple-dialog-title">拒绝理由：</DialogTitle>
-      <List style={{ width: '500px' }}>
-        {rejectReaseon.map((item) => (
-          <ListItem
-            key={item}
-            button
-            onClick={() => {
-              onItemClick(item);
-              onClose();
-            }}
-          >
-            <ListItemText primary={item} />
-          </ListItem>
-        ))}
-      </List>
-    </Dialog>
-  );
+function SimpleDialog({ onClose, open, onItemClick, reasons}) {
+
+  const Reaseon: any[] = [];
+
+    return (
+      <Dialog aria-labelledby="simple-dialog-title" onClose={onClose} open={open}>
+        <DialogTitle id="simple-dialog-title">理由</DialogTitle>
+        <List style={{ width: '500px' }}>
+          {
+            reasons();
+          }
+          {Reaseon.map((item) => (
+              <ListItem
+              key={item}
+              button
+              onClick={() => {
+                onItemClick(item);
+                onClose();
+              }}
+            >
+              <ListItemText primary={item} />
+            </ListItem>
+            ))}
+        </List>
+      </Dialog>
+    );
 }
 
 export default function Leader(): JSX.Element {
@@ -76,7 +88,8 @@ export default function Leader(): JSX.Element {
   const [unavailable, setUnavailable] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const [today] = useToday();
-  const [holdChecked,setChecked]=React.useState(true);
+  const [holdChecked,setChecked]=React.useState(false);
+  const [callsecurtary,setCalled]=React.useState(false);
 
   useEffect(() => {
     client.emit('pull-leader-list');
@@ -174,6 +187,7 @@ export default function Leader(): JSX.Element {
             style={{
               marginBottom: '10px',
               backgroundColor: 'transparent',
+              fontSize: '1.3em',
             }}
           >
             <span>{today}</span>
@@ -181,7 +195,7 @@ export default function Leader(): JSX.Element {
             <FormGroup
               style={{
                 position: 'absolute',
-                right: '210px',
+                right: '300px',
                 top: '26px',
               }}
             >
@@ -202,10 +216,11 @@ export default function Leader(): JSX.Element {
                           ? LeaderStatus.UNAVAILABLE
                           : LeaderStatus.ONLINE,
                       });
-                      }
 
-                      setChecked(checked);
-                      setUnavailable(checked);
+                        setUnavailable(checked);
+                        }
+                       setChecked(checked);
+
                     }}
                   />
                 }
@@ -217,12 +232,15 @@ export default function Leader(): JSX.Element {
               color="primary"
               disabled={message !== ''}
               style={{
+                height: '40px',
                 position: 'absolute',
-                right: '120px',
+                right: '130px',
                 top: '26px',
               }}
               onClick={() => {
-                client.emit('add-message', { type: 'call', payload: { name } });
+                setCalled(true);
+                setOpen(true);
+                //client.emit('add-message', { type: 'call', payload: { name } });
                 showMessage('已呼叫，请稍等!');
               }}
             >
@@ -232,8 +250,9 @@ export default function Leader(): JSX.Element {
               variant="outlined"
               color="default"
               style={{
+                height: '40px',
                 position: 'absolute',
-                right: '20px',
+                right: '10px',
                 top: '26px',
               }}
               onClick={() => {
@@ -292,18 +311,27 @@ export default function Leader(): JSX.Element {
                             ? 'secondary'
                             : 'default'
                         }
-                        style={{ marginRight: '10px' }}
+                        style={{
+                          marginRight: '10px',
+                          //fontSize: '5em',
+                        }}
                       />
                       <ListItemText
+                        className={classes.listItemText}
                         primary={`${new Date(time).pattern(
                           'hh:mm:ss'
                         )} ${visitorName} ${summary}`}
                       />
+                      {/* <div
+                        aria-orientation="horizontal"
+                      > */}
                       <Button
-                        variant="outlined"
+                        variant="contained"
                         color="primary"
                         style={{
-                          marginRight: '10px',
+                          height: '40px',
+                          position: 'absolute',
+                          right: '90px',
                           visibility:
                             selectedIndex === index &&
                             status === VisitorStatus.PENDING
@@ -325,9 +353,12 @@ export default function Leader(): JSX.Element {
                         接见
                       </Button>
                       <Button
-                        variant="outlined"
+                        variant="contained"
                         color="secondary"
                         style={{
+                          position: 'absolute',
+                          right: '10px',
+                          height: '40px',
                           visibility:
                             selectedIndex === index &&
                             status === VisitorStatus.PENDING
@@ -340,6 +371,7 @@ export default function Leader(): JSX.Element {
                       >
                         拒绝
                       </Button>
+                      {/* </div> */}
                     </ListItem>
                   )
                 )}
@@ -352,6 +384,7 @@ export default function Leader(): JSX.Element {
               setOpen(false);
             }}
             onItemClick={(reason) => {
+              setUnavailable(holdChecked);
               if(holdChecked){
                 client.emit('change-leader-status', {
                     index: leaderList.indexOf(
@@ -368,6 +401,14 @@ export default function Leader(): JSX.Element {
                     reason,
                   },
                 });
+              }else if(callsecurtary){
+                setCalled(false);
+                client.emit('add-message', { type: 'call', payload: {
+                  name,
+                  visitorIndex: selectedIndex,
+                  visitorName: '秘书',
+                  reason,
+                 } });
               }else{
                 debugger;
                 client.emit('add-message', {
@@ -382,6 +423,13 @@ export default function Leader(): JSX.Element {
               }
 
               showMessage('已通知秘书，请稍等！');
+            }}
+            reasons={()=>{
+              if(callsecurtary){
+                Reaseon = rejectReaseon;
+              }else{
+                Reaseon = callReason;
+              }
             }}
           />
         </Paper>

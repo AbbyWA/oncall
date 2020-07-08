@@ -19,6 +19,9 @@ const darkTheme = createMuiTheme({
       main: '#ff3d00',
     },
   },
+  typography: {
+    fontSize: 22,
+  },
 });
 
 const store = configuredStore();

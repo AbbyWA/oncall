@@ -57,8 +57,9 @@ const createWindow = async () => {
 
   mainWindow = new BrowserWindow({
     show: false,
-    width: 1024,
-    height: 728,
+    width: 1024, // 1024,1920
+    height: 728, // 728,1280
+    frame: false,
     // webPreferences:
     //   (process.env.NODE_ENV === 'development' ||
     //     process.env.E2E_BUILD === 'true') &&
@@ -92,7 +93,6 @@ const createWindow = async () => {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-
   });
 
   const menuBuilder = new MenuBuilder(mainWindow);
