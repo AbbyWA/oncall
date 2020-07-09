@@ -123,9 +123,8 @@ io.on('connect', (socket) => {
   }
 
   function changeVisitorStatus(name, index, newStatus) {
-
- //   if(visitors.data[name].filter((item) => item.name === "所有人")) return {};
- //   debugger;
+    //   if(visitors.data[name].filter((item) => item.name === "所有人")) return {};
+    //   debugger;
     visitors.data = {
       ...visitors.data,
       [name]: [
@@ -143,8 +142,13 @@ io.on('connect', (socket) => {
     deleteVisitorByName(name, index);
   });
 
-  socket.on('clear-visitors',() => {
+  // Object.keys(value).forEach((key) => {
+  //   value[key] = value[key].filter((item) => item.time > today.getTime());
+  // });
+
+  socket.on('clear-visitors', () => {
     visitors.resetData();
+    messages.resetData();
   });
 
   // messages
@@ -181,6 +185,7 @@ io.on('connect', (socket) => {
   });
 
   socket.on('remove-message', (index) => {
+    console.log(index);
     const message = messages.data[index];
     if (message.type === 'resolve' || message.type === 'reject') {
       const { name } = message.payload;
@@ -191,6 +196,7 @@ io.on('connect', (socket) => {
         ),
       };
     }
+
     messages.data = [
       ...messages.data.slice(0, index),
       ...messages.data.slice(index + 1),

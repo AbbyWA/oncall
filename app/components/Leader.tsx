@@ -47,14 +47,25 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-function SimpleDialog({ onClose, open, onItemClick }) {
-  const rejectReaseon = ['下午再来', '明天再来','改期'];
+function SimpleDialog({ onClose, openType, onItemClick, open }) {
+  let reason = [];
+  let title = '';
+  if (openType === 'call') {
+    reason = ['倒杯咖啡','倒杯茶水','倒杯开水'];
+    title = '呼叫秘书：';
+  } else if (openType === 'reject') {
+    reason = ['下午再来', '明天再来','改期'];
+    title = '拒绝理由：';
+  } else if (openType === 'logout') {
+    reason = ['确认退出', '取消'];
+    title = '退出程序';
+  }
 
   return (
     <Dialog aria-labelledby="simple-dialog-title" onClose={onClose} open={open}>
-      <DialogTitle id="simple-dialog-title">拒绝理由：</DialogTitle>
+      <DialogTitle id="simple-dialog-title">{title}</DialogTitle>
       <List style={{ width: '500px' }}>
-        {rejectReaseon.map((item) => (
+        {reason.map((item) => (
           <ListItem
             key={item}
             button
@@ -80,9 +91,9 @@ export default function Leader(): JSX.Element {
   const [selectedIndex, setSelectedIndex] = React.useState(-1);
   const [unavailable, setUnavailable] = React.useState(false);
   const [open, setOpen] = React.useState(false);
+  const [openType,setOpentype] = React.useState('');
   const [today] = useToday();
   const [holdChecked,setChecked]=React.useState(false);
-  const [callsecurtary,setCalled]=React.useState(false);
 
   useEffect(() => {
     client.emit('pull-leader-list');
@@ -96,6 +107,7 @@ export default function Leader(): JSX.Element {
       // eslint-disable-next-line no-console
       console.log(payload);
       setVisitors(payload);
+      document.getElementById('message-audio').play();
     });
   }, []);
 
@@ -120,7 +132,10 @@ export default function Leader(): JSX.Element {
       >
         <FormControl
           className={classes.formControl}
-          style={{ translateY: '50%' }}
+          style={{
+            width: '200px',
+            translateY: '50%',
+          }}
         >
           <InputLabel id="name-select-label">请选择用户</InputLabel>
           <Select
@@ -199,6 +214,7 @@ export default function Leader(): JSX.Element {
                     onChange={(event) => {
                       const checked = event.target.checked;
                       if(checked){
+                        setOpentype('reject');
                         setOpen(true);
                       }else{
                         client.emit('change-leader-status', {
@@ -231,8 +247,10 @@ export default function Leader(): JSX.Element {
                 top: '26px',
               }}
               onClick={() => {
-                client.emit('add-message', { type: 'call', payload: { name } });
+                //client.emit('add-message', { type: 'call', payload: { name } });
                 showMessage('已呼叫，请稍等!');
+                setOpentype('call');
+                setOpen(true);
               }}
             >
               呼叫秘书
@@ -247,16 +265,18 @@ export default function Leader(): JSX.Element {
                 top: '26px',
               }}
               onClick={() => {
-                setName('');
-                client.emit('change-leader-status', {
-                  index: leaderList.indexOf(
-                    leaderList.filter((item) => item.name === name)[0]
-                  ),
-                  newStatus: LeaderStatus.OFFLINE,
-                });
+                setOpentype('logout');
+                setOpen(true);
+                // setName('');
+                // client.emit('change-leader-status', {
+                //   index: leaderList.indexOf(
+                //     leaderList.filter((item) => item.name === name)[0]
+                //   ),
+                //   newStatus: LeaderStatus.OFFLINE,
+                // });
               }}
             >
-              退出登录
+              切换用户
             </Button>
           </Alert>
           <Alert
@@ -311,7 +331,8 @@ export default function Leader(): JSX.Element {
                         className={classes.listItemText}
                         primary={`${new Date(time).pattern(
                           'hh:mm:ss'
-                        )} ${visitorName} ${summary}`}
+                        )} ${visitorName}`}
+                        secondary = {`${summary}`}
                       />
                       {/* <div
                         aria-orientation="horizontal"
@@ -358,6 +379,7 @@ export default function Leader(): JSX.Element {
                         }}
                         onClick={() => {
                           setOpen(true);
+                          setOpentype('reject');
                         }}
                       >
                         拒绝
@@ -370,42 +392,61 @@ export default function Leader(): JSX.Element {
             )}
           </Scrollbars>
           <SimpleDialog
+            openType={openType}
             open={open}
             onClose={() => {
               setOpen(false);
             }}
             onItemClick={(reason) => {
               setUnavailable(holdChecked);
-              if(holdChecked){
-                client.emit('change-leader-status', {
-                    index: leaderList.indexOf(
-                      leaderList.filter((item) => item.name === name)[0]
-                    ),
-                    newStatus: holdChecked
-                      ? LeaderStatus.UNAVAILABLE
-                      : LeaderStatus.ONLINE,
+              if(openType === 'reject'){
+                if(holdChecked){
+                  client.emit('change-leader-status', {
+                      index: leaderList.indexOf(
+                        leaderList.filter((item) => item.name === name)[0]
+                      ),
+                      newStatus: holdChecked
+                        ? LeaderStatus.UNAVAILABLE
+                        : LeaderStatus.ONLINE,
+                    });
+                    client.emit('add-message', { type: 'holdon', payload: {
+                      name,
+                      visitorIndex: selectedIndex,
+                      visitorName: '所有人',
+                      reason,
+                    },
                   });
-                  client.emit('add-message', { type: 'holdon', payload: {
-                    name,
-                    visitorIndex: selectedIndex,
-                    visitorName: '所有人',
-                    reason,
-                  },
+                }else {
+                  client.emit('add-message', {
+                    type: 'reject',
+                    payload: {
+                      name,
+                      visitorIndex: selectedIndex,
+                      visitorName: visitors[name][selectedIndex].name,
+                      reason,
+                    },
+                  });
+                }
+
+                showMessage('已通知秘书，请稍等！');
+              } else if (openType === 'call') {
+                client.emit('add-message', { type: 'call',
+                payload: {
+                  name,
+                  visitorIndex: selectedIndex,
+                  visitorName: '秘书',
+                  reason,
+                 },
                 });
-              }else{
-                debugger;
-                client.emit('add-message', {
-                  type: 'reject',
-                  payload: {
-                    name,
-                    visitorIndex: selectedIndex,
-                    visitorName: visitors[name][selectedIndex].name,
-                    reason,
-                  },
+              }else if (reason === '确认退出'){
+                setName('');
+                client.emit('change-leader-status', {
+                  index: leaderList.indexOf(
+                    leaderList.filter((item) => item.name === name)[0]
+                  ),
+                  newStatus: LeaderStatus.OFFLINE,
                 });
               }
-
-              showMessage('已通知秘书，请稍等！');
             }}
           />
         </Paper>

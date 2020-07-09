@@ -18,6 +18,8 @@ import { makeStyles } from '@material-ui/core/styles';
 import client from '../client';
 import { VisitorStatus, LeaderStatus } from '../constants';
 import useToday from './useToday';
+import { Dialog, DialogTitle } from '@material-ui/core';
+import SelectInput from '@material-ui/core/Select/SelectInput';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -42,11 +44,39 @@ function findLeaderByName(leaders, name) {
   return leaders.filter((item) => item.name === name)[0];
 }
 
+function SimpleDialog({ onClose, openType, onItemClick, open }) {
+  const reason = ['确认清除','取消'];
+  const title = '清除内容';
+
+  return (
+    <Dialog aria-labelledby="simple-dialog-title" onClose={onClose} open={open}>
+      <DialogTitle id="simple-dialog-title">{title}</DialogTitle>
+      <List style={{ width: '500px' }}>
+        {reason.map((item) => (
+          <ListItem
+            key={item}
+            button
+            onClick={() => {
+              onItemClick(item);
+              onClose();
+            }}
+          >
+            <ListItemText primary={item} />
+          </ListItem>
+        ))}
+      </List>
+    </Dialog>
+  );
+}
+
 export default function Home(): JSX.Element {
   const classes = useStyles();
   const [selected, setSelected] = useState();
   const [leaderList, setLeaderList] = useState([]);
   const [visitors, setVisitors] = useState({});
+  const [open, setOpen] = React.useState(false);
+  const [openType,setOpentype] = React.useState('');
+  const [index, setIndex] = React.useState(-1);
   const [newVisitor, setNewVisitor] = useState({
     name: '',
     summary: '',
@@ -63,6 +93,7 @@ export default function Home(): JSX.Element {
       // eslint-disable-next-line no-console
       console.log(payload);
       setLeaderList(payload);
+
       setSelected(payload[0].name);
     });
     client.on('push-visitor-list', (payload) => {
@@ -157,6 +188,9 @@ export default function Home(): JSX.Element {
                 }
                 id="outlined-summary"
                 label="事由"
+                fullWidth inputProps = {{
+                    maxLength: 50,
+                }}
                 value={newVisitor.summary}
                 onChange={(event) => {
                   setNewVisitor({
@@ -167,7 +201,7 @@ export default function Home(): JSX.Element {
                 variant="outlined"
                 style={{
                   marginRight: '20px',
-                  width: '500px'
+                  width: '500px',
                 }}
               />
               <Button
@@ -193,7 +227,8 @@ export default function Home(): JSX.Element {
                 color="secondary"
                 style={{ marginLeft: '110px' }}
                 onClick={() => {
-                  client.emit('clear-visitors',{});
+                  setOpentype('clearall');
+                  setOpen(true);
                 }}
             >
               一键清除
@@ -230,13 +265,16 @@ export default function Home(): JSX.Element {
                       />
 
                       <Button
-                        // variant="contained"
+                        variant="outlined"
                         color="secondary"
                         onClick={() => {
-                          client.emit('delete-visitor-by-name', {
-                            name: selected,
-                            index,
-                          });
+                          setOpentype('clear');
+                          setIndex(index);
+                          setOpen(true);
+                          // client.emit('delete-visitor-by-name', {
+                          //   name: selected,
+                          //   index,
+                          // });
                         }}
                       >
                         清除
@@ -273,7 +311,7 @@ export default function Home(): JSX.Element {
                 ) => {
                   let message = '';
                   if (type === 'call') {
-                    message = `${name} 呼叫秘书`;
+                    message = `${name} 呼叫 ${visitorName} ${reason}`;
                   }
                   if (type === 'resolve') {
                     message = `${name} 需要接见 ${visitorName}`;
@@ -304,6 +342,28 @@ export default function Home(): JSX.Element {
             </List>
           )}
         </Scrollbars>
+        <SimpleDialog
+          openType={openType}
+          open={open}
+          onClose={() => {
+            setOpen(false);
+          }}
+          onItemClick={(reason) => {
+            if(openType === 'clearall'){
+              if(reason === '确认清除'){
+                client.emit('clear-visitors',{});
+              }
+            }else if (openType === 'clear'){
+              if(reason === '确认清除'){
+                client.emit('delete-visitor-by-name', {
+                  name: selected,
+                  index,
+                });
+                setIndex(-1);
+              }
+            }
+          }}
+        />
       </Paper>
     </div>
   );
