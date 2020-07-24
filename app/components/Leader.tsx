@@ -42,7 +42,7 @@ const useStyles = makeStyles((theme) => ({
   },
   listItemText: {
     color: theme.palette.text.primary,
-    marginRight: '190px',
+    marginRight: '200px',
     //position: 'absolute',
   },
 }));
@@ -51,14 +51,14 @@ function SimpleDialog({ onClose, openType, onItemClick, open }) {
   let reason = [];
   let title = '';
   if (openType === 'call') {
-    reason = ['倒杯咖啡','倒杯茶水','倒杯开水'];
+    reason = ['倒杯咖啡','倒杯茶水','倒杯开水','来办公室'];
     title = '呼叫秘书：';
   } else if (openType === 'reject') {
     reason = ['下午再来', '明天再来','改期'];
     title = '拒绝理由：';
   } else if (openType === 'logout') {
     reason = ['确认退出', '取消'];
-    title = '退出程序';
+    title = '切换用户';
   }
 
   return (
@@ -103,13 +103,20 @@ export default function Leader(): JSX.Element {
       console.log(payload);
       setLeaderList(payload);
     });
-    client.on('push-visitor-list', (payload) => {
-      // eslint-disable-next-line no-console
-      console.log(payload);
+  },[]);
+
+  useEffect(() => {
+    const onPushVisitorList = (payload) => {
+      if (name && payload[name].length > visitors[name].length) {
+        document.getElementById('message-audio').play();
+      }
       setVisitors(payload);
-      document.getElementById('message-audio').play();
-    });
-  }, []);
+    };
+    client.on('push-visitor-list', onPushVisitorList);
+    return () => {
+      client.off('push-visitor-list', onPushVisitorList);
+    };
+  }, [name, visitors]);
 
   useEffect(() => {
     if (!name) {
@@ -224,12 +231,12 @@ export default function Leader(): JSX.Element {
                         newStatus: checked
                           ? LeaderStatus.UNAVAILABLE
                           : LeaderStatus.ONLINE,
-                      });
+                        });
 
                         setUnavailable(checked);
-                        }
-                       setChecked(checked);
+                      }
 
+                      setChecked(checked);
                     }}
                   />
                 }
@@ -248,7 +255,6 @@ export default function Leader(): JSX.Element {
               }}
               onClick={() => {
                 //client.emit('add-message', { type: 'call', payload: { name } });
-                showMessage('已呼叫，请稍等!');
                 setOpentype('call');
                 setOpen(true);
               }}
@@ -343,7 +349,7 @@ export default function Leader(): JSX.Element {
                         style={{
                           height: '40px',
                           position: 'absolute',
-                          right: '90px',
+                          right: '105px',
                           visibility:
                             selectedIndex === index &&
                             status === VisitorStatus.PENDING
@@ -369,7 +375,7 @@ export default function Leader(): JSX.Element {
                         color="secondary"
                         style={{
                           position: 'absolute',
-                          right: '10px',
+                          right: '5px',
                           height: '40px',
                           visibility:
                             selectedIndex === index &&
@@ -398,6 +404,7 @@ export default function Leader(): JSX.Element {
               setOpen(false);
             }}
             onItemClick={(reason) => {
+              debugger;
               setUnavailable(holdChecked);
               if(openType === 'reject'){
                 if(holdChecked){
@@ -438,8 +445,10 @@ export default function Leader(): JSX.Element {
                   reason,
                  },
                 });
+                showMessage('已呼叫，请稍等!');
               }else if (reason === '确认退出'){
                 setName('');
+                setUnavailable(false);
                 client.emit('change-leader-status', {
                   index: leaderList.indexOf(
                     leaderList.filter((item) => item.name === name)[0]

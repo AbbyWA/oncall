@@ -31,6 +31,11 @@ const useStyles = makeStyles((theme) => ({
     color: theme.palette.text.secondary,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
+  listItemText: {
+    color: theme.palette.text.primary,
+    marginRight: '30px',
+    //position: 'absolute',
+  },
 }));
 
 const statusColor = {
@@ -101,15 +106,22 @@ export default function Home(): JSX.Element {
       console.log(payload);
       setVisitors(payload);
     });
-    client.on('push-messages', (payload) => {
-      // eslint-disable-next-line no-console
-      console.log(payload);
+  },[]);
+
+
+  useEffect(() => {
+    const onPushMessages = (payload) => {
       if (payload.length > messages.length) {
         document.getElementById('message-audio').play();
-      }
+    }
       setMessages(payload);
-    });
-  }, []);
+    };
+    client.on('push-messages', onPushMessages);
+
+    return () => {
+      client.off('push-messages', onPushMessages);
+    }
+  }, [messages]);
 
   return (
     <div data-tid="container" style={{ height: '100vh', padding: '10px' }}>
@@ -259,6 +271,7 @@ export default function Home(): JSX.Element {
                         style={{ marginRight: '10px' }}
                       />
                       <ListItemText
+                        className={classes.listItemText}
                         primary={`${new Date(time).pattern(
                           'hh:mm:ss'
                         )} ${name} ${summary}`}
